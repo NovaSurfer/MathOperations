@@ -3,4 +3,4 @@ project(MathOperations)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(MathOperations scr/main.cpp scr/operation_generator.h)
+add_executable(MathOperations src/main.cpp src/operation_generator.h)
