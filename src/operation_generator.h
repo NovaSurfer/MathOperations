@@ -5,11 +5,21 @@
 #ifndef MATHOPERATIONS_OPERATION_GENERATOR_H
 #define MATHOPERATIONS_OPERATION_GENERATOR_H
 
+#include <cmath>
 #include <cstdint>
 #include <unordered_map>
 
 namespace mathgens
 {
+
+    namespace utils
+    {
+        inline static bool is_perfect_square(unsigned n)
+        {
+            const double root = sqrt(n);
+            return ((root - floor(root)) == 0.0);
+        }
+    }
 
     enum class Operations : unsigned
     {
@@ -79,9 +89,26 @@ namespace mathgens
         static constexpr unsigned min = MIN;
         static constexpr unsigned max = MAX;
 
+        /*
+         * Returns range size [min, max]
+         */
         constexpr unsigned size()
         {
-            return max - min;
+            return (max - min) + 1;
+        }
+
+        /*
+         * Returns number of perfect squares between [min, max]
+         */
+        constexpr unsigned squares_size(size_t sqrts_size)
+        {
+            for(size_t i = MIN; i <= MAX; ++i) {
+                for(size_t j = 1; j * j <= i; ++j) {
+                    if(j * j == i)
+                        sqrts_size++;
+                }
+            }
+            return sqrts_size;
         }
     };
 
@@ -106,7 +133,7 @@ namespace mathgens
         unsigned result;
     };
 
-    template <size_t N>
+    template <size_t N, size_t N_SQRTS>
     class Generator
     {
     public:
@@ -116,14 +143,17 @@ namespace mathgens
         GeneratorResult next();
 
     private:
+        void split_numbers();
+
         GeneratorData gendata;
         unsigned current_value = 0;
         size_t id = 0;
-        int numbs_array[N];
+        unsigned numbs_array[N];
+        unsigned numbs_sqrts_array[N_SQRTS];
     };
 
-    template <size_t N>
-    void Generator<N>::init(const GeneratorData& gendata)
+    template <size_t N, size_t N_SQRTS>
+    void Generator<N, N_SQRTS>::init(const GeneratorData& gendata)
     {
         this->gendata = gendata;
 
@@ -144,27 +174,46 @@ namespace mathgens
             numbs_array[j] = numbs_array[i];
             numbs_array[i] = t;
         }
+
+        split_numbers();
     }
 
-    template <size_t N>
-    unsigned Generator<N>::get_next_num()
+    template <size_t N, size_t N_SQRTS>
+    unsigned Generator<N, N_SQRTS>::get_next_num()
     {
         unsigned result = numbs_array[id % N];
         id++;
         return result;
     }
 
-    template <size_t N>
-    OperationData Generator<N>::get_next_operation()
+    template <size_t N, size_t N_SQRTS>
+    OperationData Generator<N, N_SQRTS>::get_next_operation()
     {
         return OperationData();
     }
 
-    template <size_t N>
-    GeneratorResult Generator<N>::next()
+    template <size_t N, size_t N_SQRTS>
+    GeneratorResult Generator<N, N_SQRTS>::next()
     {
         unsigned result = get_next_num();
+    }
 
+    template <size_t N, size_t N_SQRTS>
+    void Generator<N, N_SQRTS>::split_numbers()
+    {
+        // Split perfect squares
+        {
+            size_t i = 0;
+            for(size_t j = 0; j < N; ++j) {
+                unsigned value = numbs_array[j];
+                if(utils::is_perfect_square(value)) {
+                    numbs_sqrts_array[i] = value;
+                    ++i;
+                }
+            }
+        }
+        // TODO: Split numbers with power of 2
+        // TODO: Split other arrays
     }
 }
 #endif // MATHOPERATIONS_OPERATION_GENERATOR_H

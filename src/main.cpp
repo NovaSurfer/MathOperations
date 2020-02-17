@@ -18,18 +18,21 @@ int main()
 
 
     GeneratorData gendata_lvl1;
-    GeneratorRange<32,64> range;
+    GeneratorRange<9,25> range;
     gendata_lvl1.min_value = range.min;
     gendata_lvl1.max_value = range.max;
-    Generator<range.size()> generator_lvl1;
+    const int sqrt_size_buff = 0;
+    constexpr size_t rng_size = range.size();
+    constexpr size_t sqrs_size = range.squares_size(sqrt_size_buff);
+    Generator<rng_size, sqrs_size> generator_lvl1;
     generator_lvl1.init(gendata_lvl1);
 
-    GeneratorData gendata_lvl2;
-    GeneratorRange<64,128> range2;
-    gendata_lvl2.min_value = range2.min;
-    gendata_lvl2.max_value = range2.max;
-    Generator<range2.size()> generator_lvl2;
-    generator_lvl2.init(gendata_lvl2);
+//    GeneratorData gendata_lvl2;
+//    GeneratorRange<64,128> range2;
+//    gendata_lvl2.min_value = range2.min;
+//    gendata_lvl2.max_value = range2.max;
+//    Generator<range2.size()> generator_lvl2;
+//    generator_lvl2.init(gendata_lvl2);
 
     printf("Operation type: %d\nSome weight: %d", static_cast<unsigned>(opers), weights[opers]);
     return 0;
