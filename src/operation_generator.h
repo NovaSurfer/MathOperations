@@ -14,6 +14,22 @@ namespace mathgens
 
     namespace utils
     {
+        using num_check_func = bool (*)(unsigned);
+
+        inline static void split_numbs_by_type(num_check_func is_type,
+                                               const unsigned* const src_array,
+                                               unsigned* dest_array, size_t src_length)
+        {
+            size_t i = 0;
+            for(size_t j = 0; j < src_length; ++j) {
+                unsigned value = src_array[j];
+                if(is_type(value)) {
+                    dest_array[i] = value;
+                    ++i;
+                }
+            }
+        }
+
         inline static bool is_perfect_square(unsigned n)
         {
             const double root = sqrt(n);
@@ -23,6 +39,18 @@ namespace mathgens
         inline static constexpr bool is_power_of_two(unsigned n)
         {
             return (n != 0) && ((n & (n - 1)) == 0);
+        }
+
+        inline static constexpr bool is_prime(unsigned n)
+        {
+            if(n == 0 || n == 1)
+                return false;
+
+            for(unsigned i = 2; i < n; ++i)
+                if(n % i == 0)
+                    return false;
+
+            return true;
         }
     }
 
@@ -106,7 +134,7 @@ namespace mathgens
             for(size_t i = MIN; i <= MAX; ++i) {
                 for(size_t j = 1; j * j <= i; ++j) {
                     if(j * j == i)
-                        sqrts_size++;
+                        ++sqrts_size;
                 }
             }
             return sqrts_size;
@@ -116,9 +144,18 @@ namespace mathgens
         {
             for(size_t i = MIN; i <= MAX; ++i) {
                 if(utils::is_power_of_two(i))
-                    powsof2_size++;
+                    ++powsof2_size;
             }
             return powsof2_size;
+        }
+
+        constexpr size_t primes_size(size_t primes_size) const
+        {
+            for(size_t i = MIN; i <= MAX; ++i) {
+                if(utils::is_prime(i))
+                    ++primes_size;
+            }
+            return primes_size;
         }
     };
 
@@ -140,7 +177,7 @@ namespace mathgens
 
     struct GenRes
     {
-        static constexpr size_t CORRECT_INDEX = 0;
+        static constexpr size_t CORRECT_ID = 0;
         // For now hardcoded to 3;
         OperationData answers[3];
         unsigned result;
@@ -151,6 +188,7 @@ namespace mathgens
         N,
         N_SQRTS,
         N_POWS2,
+        N_PRIMES,
         THE_END
     };
 
@@ -161,52 +199,70 @@ namespace mathgens
 
     public:
         void init(const GeneratorData& gendata);
-        unsigned get_next_num();
         OperationData get_next_operation();
         GenRes next();
+        unsigned get_current_result() const
+        {
+            return current_result;
+        }
+
+        unsigned get_previous_result() const
+        {
+            return prev_result;
+        }
 
     private:
+        unsigned get_next_num();
         void split_numbers();
         Operations pick_operation();
 
         GeneratorData gendata;
-        unsigned current_value = 0;
-        size_t id = 0;
+        unsigned current_result = 0;
+        unsigned prev_result = 0;
         unsigned numbs_array[SIZE[arg::N]];
         unsigned numbs_sqrts_array[SIZE[arg::N_SQRTS]];
         unsigned numbs_pow2_array[SIZE[arg::N_POWS2]];
+        unsigned numbs_non_prime_array[SIZE[arg::N] - SIZE[arg::N_PRIMES]];
     };
 
     template <const size_t* SIZE>
     void Generator<SIZE>::init(const GeneratorData& gendata)
     {
         this->gendata = gendata;
-        constexpr size_t lenght = SIZE[arg::N];
+        constexpr size_t length = SIZE[arg::N];
 
-        if constexpr(lenght < 1)
+        if constexpr(length < 1)
             return;
 
         // Fill array
         unsigned min = gendata.min_value;
-        for(size_t i = 0; i < SIZE[arg::N]; ++i) {
+        for(size_t i = 0; i < length; ++i) {
             numbs_array[i] = min++;
         }
 
         // Shuffle array
         srand(time(nullptr));
-        for(size_t i = 0; i < lenght - 1; ++i) {
-            size_t j = i + rand() / (RAND_MAX / (lenght - i) + 1);
+        size_t k = 0;
+        for(size_t i = 0; i < length; ++i) {
+            size_t j = i + rand() / (RAND_MAX / (length - i) + 1);
             int t = numbs_array[j];
             numbs_array[j] = numbs_array[i];
             numbs_array[i] = t;
+            // Fill non-prime array
+            if(!utils::is_prime(numbs_array[i])) {
+                numbs_non_prime_array[k] = numbs_array[i];
+                ++k;
+            }
         }
 
         split_numbers();
+        current_result = get_next_num();
     }
 
     template <const size_t* SIZE>
     unsigned Generator<SIZE>::get_next_num()
     {
+        static size_t id;
         unsigned result = numbs_array[id % SIZE[arg::N]];
         id++;
         return result;
@@ -221,59 +277,71 @@ namespace mathgens
     template <const size_t* SIZE>
     GenRes Generator<SIZE>::next()
     {
-        GenRes genres;
-        static size_t regular_id;
+        // Index 0 is used for the first 'current_result'
+        static size_t regular_id = 1;
         static size_t sqrts_id;
         static size_t pows2_id;
+        unsigned correct_number = 0;
+        GenRes genres;
 
         Operations oper = pick_operation();
 
         switch(oper) {
         case Operations::PLUS:
-        case Operations::MINUS:
-        case Operations::MULTIPLY:
-        case Operations::DIVIDE:
             genres.result = numbs_array[regular_id % SIZE[arg::N]];
+            if(genres.result < current_result) {
+                genres.answers[GenRes::CORRECT_ID].type = Operations::MINUS;
+                correct_number = current_result - genres.result;
+            } else {
+                genres.answers[GenRes::CORRECT_ID].type = Operations::PLUS;
+                correct_number = genres.result - current_result;
+            }
+            genres.answers[GenRes::CORRECT_ID].number = correct_number;
+            prev_result = current_result;
+            current_result = genres.result;
             break;
-        case Operations::POW:
-            genres.result = numbs_pow2_array[regular_id % SIZE[arg::N_POWS2]];
+        case Operations::MINUS:
+            genres.result = numbs_array[regular_id % SIZE[arg::N]];
+            if(genres.result > current_result) {
+                genres.answers[GenRes::CORRECT_ID].type = Operations::PLUS;
+                correct_number = genres.result - current_result;
+            } else {
+                genres.answers[GenRes::CORRECT_ID].type = Operations::MINUS;
+                correct_number = current_result - genres.result;
+            }
+            genres.answers[GenRes::CORRECT_ID].number = correct_number;
+            prev_result = current_result;
+            current_result = genres.result;
             break;
-        case Operations::SQRT:
-            genres.result = numbs_sqrts_array[regular_id % SIZE[arg::N_SQRTS]];
+        case Operations::MULTIPLY:
+
             break;
-        case Operations::MOD:
-            break;
-        case Operations::LOG:
-            break;
+            //        case Operations::DIVIDE:
+            //            genres.result = numbs_array[regular_id % SIZE[arg::N]];
+            //            break;
+            //        case Operations::POW:
+            //            genres.result = numbs_pow2_array[regular_id % SIZE[arg::N_POWS2]];
+            //            break;
+            //        case Operations::SQRT:
+            //            genres.result = numbs_sqrts_array[regular_id % SIZE[arg::N_SQRTS]];
+            //            break;
+            //        case Operations::MOD:
+            //            break;
+            //        case Operations::LOG:
+            //            break;
         }
+        return genres;
     }
 
     template <const size_t* SIZE>
     void Generator<SIZE>::split_numbers()
     {
         constexpr size_t length = SIZE[arg::N];
-        // Split perfect squares
-        {
-            size_t i = 0;
-            for(size_t j = 0; j < length; ++j) {
-                unsigned value = numbs_array[j];
-                if(utils::is_perfect_square(value)) {
-                    numbs_sqrts_array[i] = value;
-                    ++i;
-                }
-            }
-        }
-        // Split numbers that are power of 2
-        {
-            size_t i = 0;
-            for(size_t j = 0; j < length; ++j) {
-                unsigned value = numbs_array[j];
-                if(utils::is_power_of_two(value)) {
-                    numbs_pow2_array[i] = value;
-                    ++i;
-                }
-            }
-        }
+        utils::split_numbs_by_type(utils::is_perfect_square, numbs_non_prime_array,
+                                   numbs_sqrts_array, length);
+        utils::split_numbs_by_type(utils::is_power_of_two, numbs_non_prime_array, numbs_pow2_array,
+                                   length);
+
         // TODO: Split other arrays
     }
     template <const size_t* SIZE>
