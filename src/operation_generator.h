@@ -121,7 +121,7 @@ namespace mathgens
         /*
          * Returns range size [min, max]
          */
-        constexpr unsigned size()
+        static constexpr unsigned size()
         {
             return (max - min) + 1;
         }
@@ -129,8 +129,9 @@ namespace mathgens
         /*
          * Returns number of perfect squares between [min, max]
          */
-        constexpr size_t squares_size(size_t sqrts_size) const
+        static constexpr size_t squares_size()
         {
+            static size_t sqrts_size = 0;
             for(size_t i = MIN; i <= MAX; ++i) {
                 for(size_t j = 1; j * j <= i; ++j) {
                     if(j * j == i)
@@ -140,8 +141,9 @@ namespace mathgens
             return sqrts_size;
         }
 
-        constexpr size_t powsof2_size(size_t powsof2_size) const
+        static constexpr size_t powsof2_size()
         {
+            static size_t powsof2_size = 0;
             for(size_t i = MIN; i <= MAX; ++i) {
                 if(utils::is_power_of_two(i))
                     ++powsof2_size;
@@ -149,8 +151,9 @@ namespace mathgens
             return powsof2_size;
         }
 
-        constexpr size_t primes_size(size_t primes_size) const
+        static constexpr size_t primes_size()
         {
+            static size_t primes_size = 0;
             for(size_t i = MIN; i <= MAX; ++i) {
                 if(utils::is_prime(i))
                     ++primes_size;
@@ -170,9 +173,14 @@ namespace mathgens
 
     struct GeneratorData
     {
+        GeneratorData(OperWeightMap w, unsigned min, unsigned max)
+            : weights(w)
+            , min_value(min)
+            , max_value(max)
+        {}
         OperWeightMap weights;
-        unsigned max_value;
         unsigned min_value;
+        unsigned max_value;
     };
 
     struct GenRes
@@ -198,6 +206,7 @@ namespace mathgens
         using arg = gen_data_args;
 
     public:
+        Generator();
         void init(const GeneratorData& gendata);
         OperationData get_next_operation();
         GenRes next();
@@ -225,6 +234,12 @@ namespace mathgens
         unsigned numbs_pow2_array[SIZE[arg::N_POWS2]];
         unsigned numbs_non_prime_array[SIZE[arg::N] - SIZE[arg::N_PRIMES]];
     };
+
+  
+
+    template <const size_t* SIZE>
+    inline Generator<SIZE>::Generator()
+    {}
 
     template <const size_t* SIZE>
     void Generator<SIZE>::init(const GeneratorData& gendata)
@@ -259,6 +274,27 @@ namespace mathgens
         split_numbers();
         current_result = get_next_num();
     }
+
+    template <size_t MIN, size_t MAX>
+    class GeneratorDataProvider
+    {
+    public:
+        constexpr GeneratorDataProvider(const OperWeightMap& weights)
+            : gendata(weights, MAX, MIN)
+        {}
+
+        static constexpr GeneratorRange<MIN, MAX> range {};
+        static constexpr size_t args[gen_data_args::THE_END] {
+            range.size(), range.squares_size(), range.powsof2_size(), range.primes_size()};
+
+        const GeneratorData& get_gendata() const
+        {
+            return gendata;
+        }
+
+    private:
+        GeneratorData gendata;
+    };
 
     template <const size_t* SIZE>
     unsigned Generator<SIZE>::get_next_num()
@@ -316,9 +352,9 @@ namespace mathgens
             current_result = genres.result;
             fill_incorrect_data(genres.answers);
             break;
-//        case Operations::MULTIPLY:
-//
-//            break;
+            //        case Operations::MULTIPLY:
+            //
+            //            break;
             //        case Operations::DIVIDE:
             //            genres.result = numbs_array[regular_id % SIZE[arg::N]];
             //            break;
@@ -344,13 +380,11 @@ namespace mathgens
         unsigned incorrect_answers[6];
         size_t j = 0;
 
-        for(size_t i = correct_answer + 1; i <= correct_answer + 3; ++i, ++j)
-        {
+        for(size_t i = correct_answer + 1; i <= correct_answer + 3; ++i, ++j) {
             incorrect_answers[j] = i;
         }
 
-        for(size_t i = correct_answer - 1; i >= correct_answer - 3; --i, ++j)
-        {
+        for(size_t i = correct_answer - 1; i >= correct_answer - 3; --i, ++j) {
             incorrect_answers[j] = i;
         }
 
@@ -364,8 +398,7 @@ namespace mathgens
             incorrect_answers[i] = t;
         }
 
-        for(size_t i = 0; i < 3; ++i)
-        {
+        for(size_t i = 0; i < 3; ++i) {
             if(i != GenRes::CORRECT_ID) {
                 unsigned value = incorrect_answers[i];
                 answers[i].number = value;
