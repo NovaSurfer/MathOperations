@@ -214,6 +214,7 @@ namespace mathgens
     private:
         unsigned get_next_num();
         void split_numbers();
+        void fill_incorrect_data(OperationData* answers);
         Operations pick_operation();
 
         GeneratorData gendata;
@@ -299,6 +300,7 @@ namespace mathgens
             genres.answers[GenRes::CORRECT_ID].number = correct_number;
             prev_result = current_result;
             current_result = genres.result;
+            fill_incorrect_data(genres.answers);
             break;
         case Operations::MINUS:
             genres.result = numbs_array[regular_id % SIZE[arg::N]];
@@ -312,10 +314,11 @@ namespace mathgens
             genres.answers[GenRes::CORRECT_ID].number = correct_number;
             prev_result = current_result;
             current_result = genres.result;
+            fill_incorrect_data(genres.answers);
             break;
-        case Operations::MULTIPLY:
-
-            break;
+//        case Operations::MULTIPLY:
+//
+//            break;
             //        case Operations::DIVIDE:
             //            genres.result = numbs_array[regular_id % SIZE[arg::N]];
             //            break;
@@ -331,6 +334,45 @@ namespace mathgens
             //            break;
         }
         return genres;
+    }
+
+    // TODO: replace hard-coded values
+    template <const size_t* SIZE>
+    void Generator<SIZE>::fill_incorrect_data(OperationData* answers)
+    {
+        unsigned correct_answer = answers[GenRes::CORRECT_ID].number;
+        unsigned incorrect_answers[6];
+        size_t j = 0;
+
+        for(size_t i = correct_answer + 1; i <= correct_answer + 3; ++i, ++j)
+        {
+            incorrect_answers[j] = i;
+        }
+
+        for(size_t i = correct_answer - 1; i >= correct_answer - 3; --i, ++j)
+        {
+            incorrect_answers[j] = i;
+        }
+
+        // Shuffle array
+        // TODO: Replace copy-pasting
+        srand(time(nullptr));
+        for(size_t i = 0; i < 6; ++i) {
+            size_t k = i + rand() / (RAND_MAX / (6 - i) + 1);
+            int t = incorrect_answers[k];
+            incorrect_answers[k] = incorrect_answers[i];
+            incorrect_answers[i] = t;
+        }
+
+        for(size_t i = 0; i < 3; ++i)
+        {
+            if(i != GenRes::CORRECT_ID) {
+                unsigned value = incorrect_answers[i];
+                answers[i].number = value;
+                // TODO: redo
+                answers[i].type = pick_operation();
+            }
+        }
     }
 
     template <const size_t* SIZE>

@@ -11,9 +11,7 @@ int main()
     //    opers &= ~Operations::PLUS;
 
     OperWeightMap weights {
-        {Operations::PLUS, 88},  {Operations::MINUS, 9}, {Operations::MULTIPLY, 8},
-        {Operations::DIVIDE, 7}, {Operations::POW, 6},   {Operations::SQRT, 5},
-        {Operations::MOD, 4},    {Operations::LOG, 3},
+        {Operations::PLUS, 5},  {Operations::MINUS, 5}
     };
 
     OperationPair op_pair[OPERATIONS_SIZE] {
