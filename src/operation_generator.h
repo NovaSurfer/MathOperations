@@ -6,10 +6,12 @@
 #define MATHOPERATIONS_OPERATION_GENERATOR_H
 
 #include <cmath>
-#include <cstdint>
+#include <time.h>
 #include <unordered_map>
 
-namespace mathgens
+#define DLL_EXPORT __declspec(dllexport)
+
+namespace mathcore
 {
 
     namespace utils
@@ -69,7 +71,8 @@ namespace mathgens
 
     constexpr unsigned OPERATIONS_SIZE = 8;
 
-    using OperWeightMap = std::unordered_map<Operations, unsigned>;
+    //using OperWeightMap = std::unordered_map<Operations, unsigned>;
+    typedef DLL_EXPORT std::unordered_map<Operations, unsigned> OperWeightMap;
 
     // This boilerplate code can be reduced with use of template + macro, the following method is
     // described here: http://blog.bitwigglers.org/using-enum-classes-as-type-safe-bitmasks/
@@ -173,17 +176,12 @@ namespace mathgens
 
     struct GeneratorData
     {
-        GeneratorData(OperWeightMap w, unsigned min, unsigned max)
-            : weights(w)
-            , min_value(min)
-            , max_value(max)
-        {}
         OperWeightMap weights;
         unsigned min_value;
         unsigned max_value;
     };
 
-    struct GenRes
+    struct DLL_EXPORT GenRes
     {
         static constexpr size_t CORRECT_ID = 0;
         // For now hardcoded to 3;
@@ -201,12 +199,12 @@ namespace mathgens
     };
 
     template <const size_t* SIZE>
-    class Generator
+    class DLL_EXPORT Generator 
     {
         using arg = gen_data_args;
 
     public:
-        Generator();
+        //Generator();
         void init(const GeneratorData& gendata);
         OperationData get_next_operation();
         GenRes next();
@@ -235,11 +233,29 @@ namespace mathgens
         unsigned numbs_non_prime_array[SIZE[arg::N] - SIZE[arg::N_PRIMES]];
     };
 
-  
+    template <size_t MIN, size_t MAX>
+    class DLL_EXPORT GeneratorDataProvider
+    {
+    public:
+        constexpr GeneratorDataProvider(const OperWeightMap& weights)
+        {
+            gendata.weights = weights;
+            gendata.min_value = MIN;
+            gendata.max_value = MAX;
+        }
 
-    template <const size_t* SIZE>
-    inline Generator<SIZE>::Generator()
-    {}
+        static constexpr GeneratorRange<MIN, MAX> range {};
+        static constexpr size_t args[gen_data_args::THE_END] {
+            range.size(), range.squares_size(), range.powsof2_size(), range.primes_size()};
+
+        const GeneratorData& get_gendata() const
+        {
+            return gendata;
+        }
+
+    private:
+        GeneratorData gendata;
+    };
 
     template <const size_t* SIZE>
     void Generator<SIZE>::init(const GeneratorData& gendata)
@@ -274,27 +290,6 @@ namespace mathgens
         split_numbers();
         current_result = get_next_num();
     }
-
-    template <size_t MIN, size_t MAX>
-    class GeneratorDataProvider
-    {
-    public:
-        constexpr GeneratorDataProvider(const OperWeightMap& weights)
-            : gendata(weights, MAX, MIN)
-        {}
-
-        static constexpr GeneratorRange<MIN, MAX> range {};
-        static constexpr size_t args[gen_data_args::THE_END] {
-            range.size(), range.squares_size(), range.powsof2_size(), range.primes_size()};
-
-        const GeneratorData& get_gendata() const
-        {
-            return gendata;
-        }
-
-    private:
-        GeneratorData gendata;
-    };
 
     template <const size_t* SIZE>
     unsigned Generator<SIZE>::get_next_num()
@@ -337,6 +332,7 @@ namespace mathgens
             prev_result = current_result;
             current_result = genres.result;
             fill_incorrect_data(genres.answers);
+            ++regular_id;
             break;
         case Operations::MINUS:
             genres.result = numbs_array[regular_id % SIZE[arg::N]];
@@ -351,6 +347,7 @@ namespace mathgens
             prev_result = current_result;
             current_result = genres.result;
             fill_incorrect_data(genres.answers);
+            ++regular_id;
             break;
             //        case Operations::MULTIPLY:
             //
@@ -377,22 +374,18 @@ namespace mathgens
     void Generator<SIZE>::fill_incorrect_data(OperationData* answers)
     {
         unsigned correct_answer = answers[GenRes::CORRECT_ID].number;
-        unsigned incorrect_answers[6];
+        unsigned incorrect_answers[3];
         size_t j = 0;
 
         for(size_t i = correct_answer + 1; i <= correct_answer + 3; ++i, ++j) {
             incorrect_answers[j] = i;
         }
 
-        for(size_t i = correct_answer - 1; i >= correct_answer - 3; --i, ++j) {
-            incorrect_answers[j] = i;
-        }
-
         // Shuffle array
         // TODO: Replace copy-pasting
         srand(time(nullptr));
-        for(size_t i = 0; i < 6; ++i) {
-            size_t k = i + rand() / (RAND_MAX / (6 - i) + 1);
+        for(size_t i = 0; i < 3; ++i) {
+            size_t k = i + rand() / (RAND_MAX / (3 - i) + 1);
             int t = incorrect_answers[k];
             incorrect_answers[k] = incorrect_answers[i];
             incorrect_answers[i] = t;
