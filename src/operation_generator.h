@@ -132,9 +132,9 @@ namespace mathcore
         /*
          * Returns number of perfect squares between [min, max]
          */
-        static constexpr size_t squares_size()
+        static constexpr size_t squares_size(size_t sqrts_size)
         {
-            static size_t sqrts_size = 0;
+            //static size_t sqrts_size = 0;
             for(size_t i = MIN; i <= MAX; ++i) {
                 for(size_t j = 1; j * j <= i; ++j) {
                     if(j * j == i)
@@ -144,9 +144,8 @@ namespace mathcore
             return sqrts_size;
         }
 
-        static constexpr size_t powsof2_size()
+        static constexpr size_t powsof2_size(size_t powsof2_size)
         {
-            static size_t powsof2_size = 0;
             for(size_t i = MIN; i <= MAX; ++i) {
                 if(utils::is_power_of_two(i))
                     ++powsof2_size;
@@ -154,9 +153,8 @@ namespace mathcore
             return powsof2_size;
         }
 
-        static constexpr size_t primes_size()
+        static constexpr size_t primes_size(size_t primes_size)
         {
-            static size_t primes_size = 0;
             for(size_t i = MIN; i <= MAX; ++i) {
                 if(utils::is_prime(i))
                     ++primes_size;
@@ -199,7 +197,7 @@ namespace mathcore
     };
 
     template <const size_t* SIZE>
-    class DLL_EXPORT Generator 
+    class DLL_EXPORT Generator
     {
         using arg = gen_data_args;
 
@@ -244,9 +242,10 @@ namespace mathcore
             gendata.max_value = MAX;
         }
 
-        static constexpr GeneratorRange<MIN, MAX> range {};
-        static constexpr size_t args[gen_data_args::THE_END] {
-            range.size(), range.squares_size(), range.powsof2_size(), range.primes_size()};
+        static constexpr const size_t* get_args()
+        {
+            return args;
+        }
 
         const GeneratorData& get_gendata() const
         {
@@ -254,6 +253,14 @@ namespace mathcore
         }
 
     private:
+        static const size_t rng_squares = 0;
+        static const size_t rng_pows2 = 0;
+        static const size_t rng_primes = 0;
+        static constexpr GeneratorRange<MIN, MAX> range {};
+        static constexpr size_t args[gen_data_args::THE_END] {
+            range.size(), range.squares_size(rng_squares), range.powsof2_size(rng_pows2),
+            range.primes_size(rng_primes)};
+
         GeneratorData gendata;
     };
 
